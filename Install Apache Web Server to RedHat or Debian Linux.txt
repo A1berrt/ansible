@@ -1,0 +1,66 @@
+---
+-
+  handlers:
+    -
+      ansible.builtin.service:
+        name: apache2
+        state: restarted
+      name: "Restart apache2 Debian"
+    -
+      ansible.builtin.service:
+        name: httpd
+        state: restarted
+      name: "Restart httpd RedHat"
+  hosts: all
+  name: "Verify apache installation"
+  become: yes
+  tasks:
+    -
+     debug: var=ansible_os_family
+     name: Chek and Print LINUX Version
+
+    - block:    # ======Block for Debian==========
+        -
+          ansible.builtin.apt:
+            name: apache2
+            state: latest
+          name: "Ensure apache2 is at the latest version"
+        -
+          ansible.builtin.template:
+            dest: "{{ index_dest }}"
+            src: "{{ index_src }}"
+            mode: 0555
+          name: "Copy index.html to WebServers"
+          notify:
+            - "Restart apache2 Debian"
+        -
+          ansible.builtin.service:
+            name: apache2
+            state: started
+            enabled: yes
+          name: "Ensure apache2 is running"
+      when: ansible_os_family == "Debian"
+    - block:    # ======Block for RedHat==========
+        -
+          ansible.builtin.yum:
+            name: httpd
+            state: latest
+          name: "Ensure httpd is at the latest version"
+        -
+          ansible.builtin.template:
+            dest: "{{ index_dest }}"
+            src: "{{ index_src }}"
+            mode: 0555
+          name: "Copy index.html to WebServers"
+          notify:
+            - "Restart httpd RedHat"
+        -
+          ansible.builtin.service:
+            name: httpd
+            state: started
+            enabled: yes
+          name: "Ensure httpd is running"
+      when: ansible_os_family == "RedHat"
+  vars:
+    index_dest: /var/www/html
+    index_src: ./MyWebSite/index.html
